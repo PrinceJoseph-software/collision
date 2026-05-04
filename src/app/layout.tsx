@@ -10,9 +10,6 @@ const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: '--font-jet
 export const metadata: Metadata = {
   title: "Collision | Professional Music Mixer",
   description: "A high-performance, minimal music mixing environment for creators.",
-  icons: {
-    icon: "/favicon-icon.png",
-  }
 };
 
 export default function RootLayout({
