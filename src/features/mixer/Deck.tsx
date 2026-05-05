@@ -1,7 +1,7 @@
 "use client";
 
 import { ChangeEvent, useRef, useEffect, useState } from "react";
-import { UploadCloud, Music, Trash2 } from "lucide-react";
+import { UploadCloud, Music, Trash2, Link2, Globe } from "lucide-react";
 import { useMixerStore } from "@/store/useMixerStore";
 import { audioEngine } from "@/lib/audioEngine";
 
@@ -16,6 +16,9 @@ export function Deck({ deck }: DeckProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [inputMode, setInputMode] = useState<'upload' | 'link'>('upload');
+  const [urlInput, setUrlInput] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     if (deckState.isLoaded && canvasRef.current) {
@@ -104,6 +107,58 @@ export function Deck({ deck }: DeckProps) {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const handleUrlLoad = async () => {
+    if (!urlInput.trim()) return;
+    setIsSearching(true);
+    
+    try {
+      const response = await fetch('/api/spotify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: urlInput }),
+      });
+      
+      if (!response.ok) throw new Error('Failed to fetch metadata');
+      
+      const data = await response.json();
+      
+      // 2. Search for the best audio match
+      const searchResponse = await fetch('/api/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: `${data.name} ${data.artist}` }),
+      });
+      
+      if (!searchResponse.ok) throw new Error('Failed to find audio match');
+      const searchData = await searchResponse.json();
+      
+      // 3. Load the audio into the engine
+      // For the demo/beta, we'll use a reliable bridge URL
+      // In production, you would point this to your own stream-proxy instance
+      const bridgeUrl = `https://api.vevioz.com/@api/button/mp3/${searchData.videoId}`;
+      
+      // We inform the user we are buffering
+      store.setDeckTrack(deck, "streaming", `Buffering: ${data.name}...`);
+      
+      if (deck === "A") {
+        await audioEngine.loadTrackA(bridgeUrl, () => {
+          store.setDeckLoaded(deck, true);
+        });
+      } else {
+        await audioEngine.loadTrackB(bridgeUrl, () => {
+          store.setDeckLoaded(deck, true);
+        });
+      }
+      
+      store.setDeckTrack(deck, bridgeUrl, `${data.name} - ${data.artist}`);
+      setIsSearching(false);
+    } catch (error) {
+      console.error(error);
+      setIsSearching(false);
+      alert("Error finding or loading track. Some streaming sources may be restricted.");
+    }
+  };
+
   const handleVolumeChange = (e: ChangeEvent<HTMLInputElement>) => {
     const volume = parseFloat(e.target.value);
     store.setDeckVolume(deck, volume);
@@ -181,18 +236,113 @@ export function Deck({ deck }: DeckProps) {
       </div>
 
       {!deckState.trackUrl ? (
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <label className="upload-label" style={{ width: '100%', height: '100%' }}>
-            <UploadCloud size={32} color="var(--color-bronze)" strokeWidth={1.5} />
-            <span style={{ marginTop: '16px', fontWeight: 400, fontSize: '14px' }}>Click to upload track</span>
-            <span style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '8px' }}>MP3, WAV, AAC</span>
-            <input 
-              type="file" 
-              accept="audio/*" 
-              ref={fileInputRef}
-              onChange={handleFileUpload}
-            />
-          </label>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Mode Toggle */}
+          <div style={{ display: 'flex', gap: '8px', padding: '4px', backgroundColor: 'var(--color-zinc-950)', borderRadius: '6px' }}>
+            <button 
+              onClick={() => setInputMode('upload')}
+              style={{ 
+                flex: 1, 
+                padding: '6px', 
+                borderRadius: '4px', 
+                fontSize: '12px',
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: inputMode === 'upload' ? 'var(--color-surface-hover)' : 'transparent',
+                color: inputMode === 'upload' ? 'var(--color-text)' : 'var(--color-text-muted)'
+              }}
+            >
+              Upload
+            </button>
+            <button 
+              onClick={() => setInputMode('link')}
+              style={{ 
+                flex: 1, 
+                padding: '6px', 
+                borderRadius: '4px', 
+                fontSize: '12px',
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: inputMode === 'link' ? 'var(--color-surface-hover)' : 'transparent',
+                color: inputMode === 'link' ? 'var(--color-text)' : 'var(--color-text-muted)'
+              }}
+            >
+              Link
+            </button>
+          </div>
+
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {inputMode === 'upload' ? (
+              <label className="upload-label" style={{ width: '100%', height: '100%' }}>
+                <UploadCloud size={32} color="var(--color-bronze)" strokeWidth={1.5} />
+                <span style={{ marginTop: '16px', fontWeight: 400, fontSize: '14px' }}>Click to upload track</span>
+                <span style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '8px' }}>MP3, WAV, AAC</span>
+                <input 
+                  type="file" 
+                  accept="audio/*" 
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                />
+              </label>
+            ) : (
+              <div style={{ 
+                width: '100%', 
+                height: '100%', 
+                border: '1px dashed var(--color-surface-hover)', 
+                borderRadius: '8px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '24px',
+                backgroundColor: 'rgba(255, 255, 255, 0.02)'
+              }}>
+                <div style={{ 
+                  width: '48px', 
+                  height: '48px', 
+                  borderRadius: '50%', 
+                  backgroundColor: 'rgba(146, 64, 14, 0.1)', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  marginBottom: '16px'
+                }}>
+                  <Link2 size={24} color="var(--color-bronze)" strokeWidth={1.5} />
+                </div>
+                <p style={{ fontSize: '14px', marginBottom: '16px', fontWeight: 400 }}>Paste Spotify or Apple Music link</p>
+                <div style={{ width: '100%', display: 'flex', gap: '8px' }}>
+                  <input 
+                    type="text" 
+                    placeholder="https://open.spotify.com/track/..." 
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value)}
+                    style={{ 
+                      flex: 1, 
+                      backgroundColor: 'var(--color-zinc-950)', 
+                      border: '1px solid var(--color-surface-hover)', 
+                      borderRadius: '4px',
+                      padding: '8px 12px',
+                      fontSize: '12px',
+                      color: 'var(--color-text)',
+                      outline: 'none'
+                    }}
+                  />
+                  <button 
+                    className="btn btn-primary" 
+                    style={{ padding: '8px 16px', fontSize: '12px' }}
+                    onClick={handleUrlLoad}
+                    disabled={isSearching}
+                  >
+                    {isSearching ? '...' : 'Load'}
+                  </button>
+                </div>
+                <div style={{ display: 'flex', gap: '12px', marginTop: '16px', opacity: 0.5 }}>
+                  <Globe size={14} />
+                  <span style={{ fontSize: '10px', letterSpacing: '0.05em' }}>SPOTIFY & APPLE MUSIC SUPPORTED</span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>

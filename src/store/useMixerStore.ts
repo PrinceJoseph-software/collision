@@ -7,6 +7,13 @@ interface DeckState {
   isLoaded: boolean;
   eq: { high: number; mid: number; low: number };
   playbackRate: number;
+  isStreaming: boolean;
+  streamUrl: string | null;
+  streamMetadata: {
+    artist: string | null;
+    albumArt: string | null;
+    bpm: number | null;
+  } | null;
 }
 
 interface MixerState {
@@ -23,6 +30,7 @@ interface MixerState {
   setDeckLoaded: (deck: 'A' | 'B', isLoaded: boolean) => void;
   setDeckEq: (deck: 'A' | 'B', band: 'high' | 'mid' | 'low', value: number) => void;
   setDeckPlaybackRate: (deck: 'A' | 'B', rate: number) => void;
+  setDeckStreaming: (deck: 'A' | 'B', isStreaming: boolean, url?: string, metadata?: any) => void;
   removeDeckTrack: (deck: 'A' | 'B') => void;
   resetStore: () => void;
 }
@@ -34,6 +42,9 @@ const defaultDeckState: DeckState = {
   isLoaded: false,
   eq: { high: 0, mid: 0, low: 0 },
   playbackRate: 1,
+  isStreaming: false,
+  streamUrl: null,
+  streamMetadata: null,
 };
 
 export const useMixerStore = create<MixerState>((set) => ({
@@ -78,6 +89,17 @@ export const useMixerStore = create<MixerState>((set) => ({
     set((state) => ({
       ...state,
       [`deck${deck}`]: { ...state[`deck${deck}` as 'deckA' | 'deckB'], playbackRate: rate },
+    })),
+
+  setDeckStreaming: (deck, isStreaming, url: string | null = null, metadata: any = null) =>
+    set((state) => ({
+      ...state,
+      [`deck${deck}`]: { 
+        ...state[`deck${deck}` as 'deckA' | 'deckB'], 
+        isStreaming, 
+        streamUrl: url, 
+        streamMetadata: metadata 
+      },
     })),
 
   removeDeckTrack: (deck) =>
