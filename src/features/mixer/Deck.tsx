@@ -133,9 +133,8 @@ export function Deck({ deck }: DeckProps) {
       const searchData = await searchResponse.json();
       
       // 3. Load the audio into the engine
-      // For the demo/beta, we'll use a reliable bridge URL
-      // In production, you would point this to your own stream-proxy instance
-      const bridgeUrl = `https://api.vevioz.com/@api/button/mp3/${searchData.videoId}`;
+      // We use a redundant bridge URL for better stability
+      const bridgeUrl = `https://api.v-mp3.com/@api/button/mp3/${searchData.videoId}`;
       
       // We inform the user we are buffering
       store.setDeckTrack(deck, "streaming", `Buffering: ${data.name}...`);

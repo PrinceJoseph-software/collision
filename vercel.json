@@ -21,7 +21,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.scdn.co; media-src 'self' data: blob: https://*.vevioz.com; connect-src 'self' data: blob: https://api.vevioz.com https://accounts.spotify.com https://api.spotify.com;"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.scdn.co; media-src 'self' data: blob: https://*.vevioz.com https://*.v-mp3.com https://*.mp3.io https://*.convert2mp3.club; connect-src 'self' data: blob: https://*.vevioz.com https://*.v-mp3.com https://*.mp3.io https://*.convert2mp3.club https://accounts.spotify.com https://api.spotify.com;"
         }
       ]
     }
