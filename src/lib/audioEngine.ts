@@ -19,6 +19,9 @@ class AudioEngine {
   async initialize() {
     if (this.isInitialized) return;
     
+    // Resume context before creating nodes
+    await Tone.start();
+    
     this.eqA = new Tone.EQ3(0, 0, 0);
     this.eqB = new Tone.EQ3(0, 0, 0);
 
@@ -28,22 +31,28 @@ class AudioEngine {
     this.recorder = new Tone.Recorder();
     Tone.getDestination().connect(this.recorder);
     
-    await Tone.start();
     this.isInitialized = true;
+    console.log("Audio Engine Initialized & Context Resumed");
   }
 
   async loadTrackA(url: string, onLoad?: () => void) {
     if (!this.isInitialized) await this.initialize();
     if (this.playerA) this.playerA.dispose();
     
-    return new Promise<void>((resolve) => {
+    return new Promise<void>((resolve, reject) => {
       this.playerA = new Tone.Player({
         url,
         onload: () => {
-          this.playerA?.chain(this.eqA!, this.crossFade!.a);
+          if (this.eqA && this.crossFade) {
+            this.playerA?.chain(this.eqA, this.crossFade.a);
+          }
           this.offsetA = 0;
           if (onLoad) onLoad();
           resolve();
+        },
+        onerror: (err) => {
+          console.error("Error loading Track A:", err);
+          reject(err);
         }
       });
     });
@@ -53,20 +62,30 @@ class AudioEngine {
     if (!this.isInitialized) await this.initialize();
     if (this.playerB) this.playerB.dispose();
     
-    return new Promise<void>((resolve) => {
+    return new Promise<void>((resolve, reject) => {
       this.playerB = new Tone.Player({
         url,
         onload: () => {
-          this.playerB?.chain(this.eqB!, this.crossFade!.b);
+          if (this.eqB && this.crossFade) {
+            this.playerB?.chain(this.eqB, this.crossFade.b);
+          }
           this.offsetB = 0;
           if (onLoad) onLoad();
           resolve();
+        },
+        onerror: (err) => {
+          console.error("Error loading Track B:", err);
+          reject(err);
         }
       });
     });
   }
 
   play() {
+    if (!this.isInitialized) {
+      console.warn("Audio Engine not initialized. Click 'Start Mixing' first.");
+      return;
+    }
     if (this.isPlaying) return;
     this.isPlaying = true;
     

@@ -130,14 +130,15 @@ export function Deck({ deck }: DeckProps) {
       });
       
       if (!searchResponse.ok) throw new Error('Failed to find audio match');
-      const searchData = await searchResponse.json();
+      const searchResult = await searchResponse.json();
+      const videoId = searchResult.match.id;
       
       // 3. Load the audio into the engine via our local Proxy
-      // This bypasses network-level blocking of music-bridge domains
-      const bridgeUrl = `/api/proxy?id=${searchData.videoId}`;
+      const bridgeUrl = `/api/proxy?id=${videoId}`;
       
       // We inform the user we are buffering
-      store.setDeckTrack(deck, "streaming", `Buffering: ${data.name}...`);
+      store.setDeckTrack(deck, "streaming", `Streaming: ${data.name}...`);
+      store.setDeckLoaded(deck, false); // Show loading state
       
       if (deck === "A") {
         await audioEngine.loadTrackA(bridgeUrl, () => {
@@ -154,7 +155,8 @@ export function Deck({ deck }: DeckProps) {
     } catch (error) {
       console.error(error);
       setIsSearching(false);
-      alert("Error finding or loading track. Some streaming sources may be restricted.");
+      alert("Stream failed. The music source is currently busy or restricted. Please try again or use a local file.");
+      store.removeDeckTrack(deck);
     }
   };
 

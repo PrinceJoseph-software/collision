@@ -9,30 +9,37 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'YouTube API Key not configured' }, { status: 500 });
     }
 
-    // Search for the best audio match on YouTube
-    // We add "topic" or "lyrics" to get higher quality audio results
-    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query + ' audio')}&type=video&maxResults=1&key=${apiKey}`;
+    // 1. Search YouTube for official audio
+    const ytUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query + ' official audio')}&type=video&maxResults=1&key=${apiKey}`;
     
-    const response = await fetch(searchUrl);
-    const data = await response.json();
+    const ytResponse = await fetch(ytUrl);
+    const ytData = await ytResponse.json();
 
-    if (!data.items || data.items.length === 0) {
-      return NextResponse.json({ error: 'No match found' }, { status: 404 });
+    let results = [];
+
+    if (ytData.items && ytData.items.length > 0) {
+      results.push({
+        source: 'youtube',
+        id: ytData.items[0].id.videoId,
+        title: ytData.items[0].snippet.title
+      });
     }
 
-    const videoId = data.items[0].id.videoId;
-    const title = data.items[0].snippet.title;
+    // 2. Search SoundCloud as a fallback
+    // We can use a public search scraper or simply return a hint to the frontend
+    // For now, we'll return the YouTube result and a "Search Hint"
+    
+    if (results.length === 0) {
+      return NextResponse.json({ error: 'No audio match found for this track.' }, { status: 404 });
+    }
 
     return NextResponse.json({
-      videoId,
-      title,
-      // We'll use a public, reliable stream proxy for the actual audio data
-      // In a full production app, you'd host your own instance of a stream proxy
-      streamUrl: `https://yt-stream-proxy.p.rapidapi.com/download?id=${videoId}` 
+      match: results[0],
+      alternative: null // Could be a SoundCloud ID in the future
     });
 
   } catch (error) {
     console.error('Search API Error:', error);
-    return NextResponse.json({ error: 'Failed to search for audio' }, { status: 500 });
+    return NextResponse.json({ error: 'Search failed' }, { status: 500 });
   }
 }
