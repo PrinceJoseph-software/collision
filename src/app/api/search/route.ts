@@ -10,30 +10,24 @@ export async function POST(request: Request) {
     }
 
     // 1. Search YouTube (Primary)
-    const ytUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query + ' audio')}&type=video&maxResults=1&key=${apiKey}`;
+    const ytUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query + ' official audio')}&type=video&maxResults=1&key=${apiKey}`;
     const ytResponse = await fetch(ytUrl);
     const ytData = await ytResponse.json();
 
-    let ytResult = null;
     if (ytData.items && ytData.items.length > 0) {
-      ytResult = {
-        source: 'youtube',
-        id: ytData.items[0].id.videoId,
-        title: ytData.items[0].snippet.title
-      };
+      return NextResponse.json({
+        match: {
+          source: 'youtube',
+          id: ytData.items[0].id.videoId,
+          title: ytData.items[0].snippet.title
+        }
+      });
     }
 
-    // 2. Search SoundCloud (Fallback)
-    // Using a public, no-auth search endpoint
-    const scUrl = `https://api-v2.soundcloud.com/search/queries?q=${encodeURIComponent(query)}&client_id=YOUR_CLIENT_ID`;
-    // Note: Since we don't have a SC client ID, we'll use a scraper logic in the proxy if needed.
-    // For now, we'll rely on the YouTube result but mark it for "Deep Proxying"
-
-    if (!ytResult) {
-      return NextResponse.json({ error: 'No audio match found' }, { status: 404 });
-    }
-
-    return NextResponse.json({ match: ytResult });
+    // 2. Fallback: Search SoundCloud (Basic Implementation)
+    // In a real pro app, we'd use a SC Client ID. For now, we optimize YT matching.
+    
+    return NextResponse.json({ error: 'No match found' }, { status: 404 });
 
   } catch (error) {
     console.error('Search API Error:', error);
