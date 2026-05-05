@@ -19,7 +19,7 @@ class AudioEngine {
   async initialize() {
     if (this.isInitialized) return;
     
-    // Resume context before creating nodes
+    // Explicitly start Tone context on user gesture
     await Tone.start();
     
     this.eqA = new Tone.EQ3(0, 0, 0);
@@ -82,10 +82,7 @@ class AudioEngine {
   }
 
   play() {
-    if (!this.isInitialized) {
-      console.warn("Audio Engine not initialized. Click 'Start Mixing' first.");
-      return;
-    }
+    if (!this.isInitialized) return;
     if (this.isPlaying) return;
     this.isPlaying = true;
     
