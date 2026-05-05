@@ -132,9 +132,9 @@ export function Deck({ deck }: DeckProps) {
       if (!searchResponse.ok) throw new Error('Failed to find audio match');
       const searchData = await searchResponse.json();
       
-      // 3. Load the audio into the engine
-      // We use a redundant bridge URL for better stability
-      const bridgeUrl = `https://api.v-mp3.com/@api/button/mp3/${searchData.videoId}`;
+      // 3. Load the audio into the engine via our local Proxy
+      // This bypasses network-level blocking of music-bridge domains
+      const bridgeUrl = `/api/proxy?id=${searchData.videoId}`;
       
       // We inform the user we are buffering
       store.setDeckTrack(deck, "streaming", `Buffering: ${data.name}...`);
